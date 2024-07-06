@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Name Builder</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            box-sizing: border-box; /* Ensures padding and border are included in total width and height */
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .valid {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .invalid {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .count {
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .copy-button {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+        }
+        .copy-button:hover {
+            background-color: #0056b3;
+        }
+        input::placeholder {
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+        }
+        input {
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+            box-sizing: border-box; /* Ensures padding and border are included in total width and height */
+        }
+        button {
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+            box-sizing: border-box; /* Ensures padding and border are included in total width and height */
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Team Name Builder</h1>
+    <p>Please use recognized abbreviations for your faculty, division, research or cultural institute, or school. For example:</p>
+    <ul>
+        <li>FSE = Faculty of Science and Engineering</li>
+        <li>WAG = Whitworth Art Gallery</li>
+        <li>DNI = Dalton Nuclear Institute</li>
+        <li>SBS = School of Biological Sciences</li>
+    </ul>
+    <label for="faculty">1. Name of Faculty or Research/Cultural Institute (required):</label><br>
+    <input type="text" id="faculty" placeholder="Enter the faculty or institute name" style="width: 100%; padding: 10px; margin-bottom: 10px;"><br>
+    
+    <label for="school">2. Name of School (recommended but optional):</label><br>
+    <input type="text" id="school" placeholder="Enter the school name (optional)" style="width: 100%; padding: 10px; margin-bottom: 10px;"><br>
+    
+    <label for="team">3. Name of Team (required):</label><br>
+    <input type="text" id="team" placeholder="Enter the team name" style="width: 100%; padding: 10px; margin-bottom: 10px;"><br>
+    
+    <button onclick="buildAndValidateName()" style="width: 100%;">Please Click to Validate Name</button>
+    <div id="result" class="result"></div>
+    <div id="count" class="count"></div>
+    <button id="copyButton" class="copy-button" style="display:none;" onclick="copyToClipboard()">Copy to Clipboard</button>
+</div>
+
+<script>
+function buildAndValidateName() {
+    const illegalChars = /[<>:"/\\|?*&]/;
+    let faculty = document.getElementById('faculty').value.trim();
+    let school = document.getElementById('school').value.trim();
+    let team = document.getElementById('team').value.trim();
+    
+    if (!faculty) {
+        alert("The faculty or institute name is required.");
+        return;
+    }
+    
+    if (!team) {
+        alert("The team name is required.");
+        return;
+    }
+
+    let nameParts = ['UOM', faculty, school, team].filter(Boolean); // Filter out empty strings
+    let fullName = nameParts.join('-').replace(/ /g, '-').replace(/--+/g, '-');
+    
+    let resultElement = document.getElementById('result');
+    let countElement = document.getElementById('count');
+    let copyButton = document.getElementById('copyButton');
+    
+    if (illegalChars.test(fullName)) {
+        resultElement.textContent = `Invalid name. The name contains illegal characters: ${illegalChars}`;
+        resultElement.className = 'result invalid';
+        countElement.textContent = '';
+        copyButton.style.display = 'none';
+        return;
+    }
+
+    if (fullName.length > 64) {
+        resultElement.textContent = `The name is longer than 64 characters and will be truncated. (${fullName.length} characters)`;
+        resultElement.className = 'result invalid';
+        copyButton.style.display = 'none';
+    } else {
+        resultElement.textContent = `Valid name: ${fullName}`;
+        resultElement.className = 'result valid';
+        copyButton.style.display = 'inline-block';
+    }
+
+    countElement.textContent = `Character count: ${fullName.length}`;
+    copyButton.setAttribute('data-name', fullName);
+}
+
+function copyToClipboard() {
+    let copyButton = document.getElementById('copyButton');
+    let nameToCopy = copyButton.getAttribute('data-name');
+    navigator.clipboard.writeText(nameToCopy).then(function() {
+        alert('Name copied to clipboard: ' + nameToCopy);
+    }, function(err) {
+        alert('Could not copy text: ', err);
+    });
+}
+</script>
+
+</body>
+</html>
