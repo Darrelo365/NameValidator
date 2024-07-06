@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Team Name Builder</title>
+    <title>Site and Team name validator</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -16,7 +16,7 @@
             border: 1px solid #ccc;
             border-radius: 10px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            box-sizing: border-box; /* Ensures padding and border are included in total width and height */
+            box-sizing: border-box;
         }
         .result {
             margin-top: 10px;
@@ -55,70 +55,117 @@
             font-family: Arial, sans-serif;
             font-size: 16px;
         }
-        input {
+        input, select, button {
             font-family: Arial, sans-serif;
             font-size: 16px;
-            box-sizing: border-box; /* Ensures padding and border are included in total width and height */
+            box-sizing: border-box;
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
         }
-        button {
-            font-family: Arial, sans-serif;
-            font-size: 16px;
-            box-sizing: border-box; /* Ensures padding and border are included in total width and height */
+        select {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 140" width="24" height="24"><polyline points="20 60 70 110 120 60" stroke="%23333" stroke-width="20" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>') no-repeat right 10px center;
+            background-color: white;
+            background-size: 12px;
+        }
+        .truncated {
+            color: red;
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Team Name Builder</h1>
-    <p>Please use recognized abbreviations for your faculty, division, research or cultural institute, or school. For example:</p>
-    <ul>
-        <li>FSE = Faculty of Science and Engineering</li>
-        <li>WAG = Whitworth Art Gallery</li>
-        <li>DNI = Dalton Nuclear Institute</li>
-        <li>SBS = School of Biological Sciences</li>
-    </ul>
-    <label for="faculty">1. Name of Faculty or Research/Cultural Institute (required):</label><br>
-    <input type="text" id="faculty" placeholder="Enter the faculty or institute name" style="width: 100%; padding: 10px; margin-bottom: 10px;"><br>
-    
-    <label for="school">2. Name of School (recommended but optional):</label><br>
-    <input type="text" id="school" placeholder="Enter the school name (optional)" style="width: 100%; padding: 10px; margin-bottom: 10px;"><br>
-    
-    <label for="team">3. Name of Team (required):</label><br>
-    <input type="text" id="team" placeholder="Enter the team name" style="width: 100%; padding: 10px; margin-bottom: 10px;"><br>
-    
-    <button onclick="buildAndValidateName()" style="width: 100%;">Please Click to Validate Name</button>
+    <h1>Site and Team name validator</h1>
+    <p>Please select the type of request:</p>
+    <select id="requestType" onchange="updateForm()">
+        <option value="standard">Standard SharePoint Site or MS Team</option>
+        <option value="callQueue">A Team for a Call Queue/Auto Attendant</option>
+        <option value="teaching">A Team for Teaching</option>
+    </select>
+
+    <div id="standardForm">
+        <label for="faculty">1. Name of Faculty or Research/Cultural Institute (required):</label>
+        <input type="text" id="faculty" placeholder="Enter the faculty or institute name">
+        
+        <label for="school">2. Name of School (recommended but optional):</label>
+        <input type="text" id="school" placeholder="Enter the school name (optional)">
+        
+        <label for="team">3. Name of Team (required):</label>
+        <input type="text" id="team" placeholder="Enter the team name">
+    </div>
+
+    <div id="callQueueForm" style="display:none;">
+        <label for="callQueueSchool">Name of School (recommended but optional):</label>
+        <input type="text" id="callQueueSchool" placeholder="Enter the school name (optional)">
+
+        <label for="callQueueTeam">Name of Call Queue/Auto Attendant Team (required):</label>
+        <input type="text" id="callQueueTeam" placeholder="Enter the call queue/auto attendant team name">
+    </div>
+
+    <div id="teachingForm" style="display:none;">
+        <label for="courseId">Course ID (required):</label>
+        <input type="text" id="courseId" placeholder="Enter the course ID">
+
+        <label for="cohort">Cohort Year/Denotation (optional):</label>
+        <input type="text" id="cohort" placeholder="Enter the cohort year/denotation (optional)">
+    </div>
+
+    <button onclick="buildAndValidateName()">Please Click to Validate Name</button>
     <div id="result" class="result"></div>
     <div id="count" class="count"></div>
     <button id="copyButton" class="copy-button" style="display:none;" onclick="copyToClipboard()">Copy to Clipboard</button>
 </div>
 
 <script>
+function updateForm() {
+    const requestType = document.getElementById('requestType').value;
+    document.getElementById('standardForm').style.display = requestType === 'standard' ? 'block' : 'none';
+    document.getElementById('callQueueForm').style.display = requestType === 'callQueue' ? 'block' : 'none';
+    document.getElementById('teachingForm').style.display = requestType === 'teaching' ? 'block' : 'none';
+}
+
 function buildAndValidateName() {
     const illegalChars = /[<>:"/\\|?*&]/;
-    let faculty = document.getElementById('faculty').value.trim();
-    let school = document.getElementById('school').value.trim();
-    let team = document.getElementById('team').value.trim();
-    
-    if (!faculty) {
-        alert("The faculty or institute name is required.");
-        return;
-    }
-    
-    if (!team) {
-        alert("The team name is required.");
-        return;
+    const requestType = document.getElementById('requestType').value;
+    let fullName = '';
+
+    if (requestType === 'standard') {
+        let faculty = document.getElementById('faculty').value.trim();
+        let school = document.getElementById('school').value.trim();
+        let team = document.getElementById('team').value.trim();
+        if (!faculty || !team) {
+            alert("The faculty and team name are required.");
+            return;
+        }
+        fullName = `UOM-${faculty}-${school}-${team}`.replace(/ /g, '-').replace(/--+/g, '-').trim('-');
+    } else if (requestType === 'callQueue') {
+        let callQueueSchool = document.getElementById('callQueueSchool').value.trim();
+        let callQueueTeam = document.getElementById('callQueueTeam').value.trim();
+        if (!callQueueTeam) {
+            alert("The call queue/auto attendant team name is required.");
+            return;
+        }
+        fullName = `V-UOM-${callQueueSchool}-${callQueueTeam}`.replace(/ /g, '-').replace(/--+/g, '-').trim('-');
+    } else if (requestType === 'teaching') {
+        let courseId = document.getElementById('courseId').value.trim();
+        let cohort = document.getElementById('cohort').value.trim();
+        if (!courseId) {
+            alert("The course ID is required.");
+            return;
+        }
+        fullName = `UOM-${courseId}-${cohort}`.replace(/ /g, '-').replace(/--+/g, '-').trim('-');
     }
 
-    let nameParts = ['UOM', faculty, school, team].filter(Boolean); // Filter out empty strings
-    let fullName = nameParts.join('-').replace(/ /g, '-').replace(/--+/g, '-');
-    
     let resultElement = document.getElementById('result');
     let countElement = document.getElementById('count');
     let copyButton = document.getElementById('copyButton');
     
     if (illegalChars.test(fullName)) {
-        resultElement.textContent = `Invalid name. The name contains illegal characters: ${illegalChars}`;
+        resultElement.innerHTML = `Invalid name. The name contains illegal characters: ${illegalChars}`;
         resultElement.className = 'result invalid';
         countElement.textContent = '';
         copyButton.style.display = 'none';
@@ -126,11 +173,12 @@ function buildAndValidateName() {
     }
 
     if (fullName.length > 64) {
-        resultElement.textContent = `The name is longer than 64 characters and will be truncated. (${fullName.length} characters)`;
+        resultElement.innerHTML = `Name length is important and needs to be 64 characters or under so it won't be truncated in things like site URL and associated mailboxes. Anything in red won't be included in the name. (${fullName.length} characters)<br>
+                                    <span style="color: green;">${fullName.substring(0, 64)}</span><span class="truncated">${fullName.substring(64)}</span>`;
         resultElement.className = 'result invalid';
         copyButton.style.display = 'none';
     } else {
-        resultElement.textContent = `Valid name: ${fullName}`;
+        resultElement.innerHTML = `Valid name: ${fullName}`;
         resultElement.className = 'result valid';
         copyButton.style.display = 'inline-block';
     }
