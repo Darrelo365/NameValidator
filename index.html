@@ -74,6 +74,11 @@
         .truncated {
             color: red;
         }
+        .email-group {
+            margin-top: 15px;
+            border-top: 1px solid #ddd;
+            padding-top: 15px;
+        }
     </style>
 </head>
 <body>
@@ -96,6 +101,14 @@
         
         <label for="team">3. Name of Team (required):</label>
         <input type="text" id="team" placeholder="Enter the team name">
+
+        <div class="email-group">
+            <label for="standardOwner1">Owner 1 Email (required):</label>
+            <input type="email" id="standardOwner1" placeholder="owner1@unimelb.edu.au" required>
+            
+            <label for="standardOwner2">Owner 2 Email (optional):</label>
+            <input type="email" id="standardOwner2" placeholder="owner2@unimelb.edu.au">
+        </div>
     </div>
 
     <div id="callQueueForm" style="display:none;">
@@ -104,6 +117,14 @@
 
         <label for="callQueueTeam">Name of Call Queue/Auto Attendant Team (required):</label>
         <input type="text" id="callQueueTeam" placeholder="Enter the call queue/auto attendant team name">
+
+        <div class="email-group">
+            <label for="callQueueOwner1">Owner 1 Email (required):</label>
+            <input type="email" id="callQueueOwner1" placeholder="owner1@unimelb.edu.au" required>
+            
+            <label for="callQueueOwner2">Owner 2 Email (optional):</label>
+            <input type="email" id="callQueueOwner2" placeholder="owner2@unimelb.edu.au">
+        </div>
     </div>
 
     <div id="teachingForm" style="display:none;">
@@ -111,13 +132,21 @@
         <input type="text" id="courseId" placeholder="Enter the course ID">
 
         <label for="cohort">Cohort Year/Denotation (optional):</label>
-        <input type="text" id="cohort" placeholder="Enter the cohort year/denotation (optional)">
+        <input type="text" id="cohort" placeholder="Enter 25, 25-26, or 2025">
+
+        <div class="email-group">
+            <label for="teachingOwner1">Owner 1 Email (required):</label>
+            <input type="email" id="teachingOwner1" placeholder="owner1@unimelb.edu.au" required>
+            
+            <label for="teachingOwner2">Owner 2 Email (optional):</label>
+            <input type="email" id="teachingOwner2" placeholder="owner2@unimelb.edu.au">
+        </div>
     </div>
 
     <button onclick="buildAndValidateName()">Please Click to Validate Name</button>
     <div id="result" class="result"></div>
     <div id="count" class="count"></div>
-    <button id="copyButton" class="copy-button" style="display:none;" onclick="copyToClipboard()">Copy to Clipboard</button>
+    <button id="emailButton" class="copy-button" style="display:none;" onclick="sendEmail()">Email Validated Name</button>
 </div>
 
 <script>
@@ -128,73 +157,135 @@ function updateForm() {
     document.getElementById('teachingForm').style.display = requestType === 'teaching' ? 'block' : 'none';
 }
 
+function normalizeCohort(input) {
+    const cohort = input.trim();
+    if (!cohort) return '';
+
+    // Handle different input formats
+    const twoDigitPattern = /^\d{2}$/;          // 25 → 2025-26
+    const shortRangePattern = /^(\d{2})-(\d{2})$/; // 25-26 → 2025-26
+    const fourDigitPattern = /^20(\d{2})$/;     // 2025 → 2025-26
+
+    if (twoDigitPattern.test(cohort)) {
+        return `20${cohort}-${(parseInt(cohort)+1).toString().padStart(2, '0')}`;
+    }
+    if (shortRangePattern.test(cohort)) {
+        const [start, end] = cohort.split('-');
+        return `20${start}-${end.padStart(2, '0')}`;
+    }
+    if (fourDigitPattern.test(cohort)) {
+        const year = cohort.match(fourDigitPattern)[1];
+        return `${cohort}-${(parseInt(year)+1).toString().padStart(2, '0')}`;
+    }
+    return cohort;
+}
+
 function buildAndValidateName() {
     const illegalChars = /[<>:"/\\|?*&]/;
     const requestType = document.getElementById('requestType').value;
     let fullName = '';
+    let cohort = '';
 
+    let owner1, owner2;
     if (requestType === 'standard') {
-        let faculty = document.getElementById('faculty').value.trim();
-        let school = document.getElementById('school').value.trim();
-        let team = document.getElementById('team').value.trim();
-        if (!faculty || !team) {
-            alert("The faculty and team name are required.");
+        const faculty = document.getElementById('faculty').value.trim();
+        const school = document.getElementById('school').value.trim();
+        const team = document.getElementById('team').value.trim();
+        owner1 = document.getElementById('standardOwner1').value.trim();
+        owner2 = document.getElementById('standardOwner2').value.trim();
+
+        if (!faculty || !team || !owner1) {
+            alert("Faculty, Team name, and Owner 1 email are required.");
             return;
         }
         fullName = `UOM-${faculty}-${school}-${team}`.replace(/ /g, '-').replace(/--+/g, '-').trim('-');
+
     } else if (requestType === 'callQueue') {
-        let callQueueSchool = document.getElementById('callQueueSchool').value.trim();
-        let callQueueTeam = document.getElementById('callQueueTeam').value.trim();
-        if (!callQueueTeam) {
-            alert("The call queue/auto attendant team name is required.");
+        const callQueueSchool = document.getElementById('callQueueSchool').value.trim();
+        const callQueueTeam = document.getElementById('callQueueTeam').value.trim();
+        owner1 = document.getElementById('callQueueOwner1').value.trim();
+        owner2 = document.getElementById('callQueueOwner2').value.trim();
+
+        if (!callQueueTeam || !owner1) {
+            alert("Call Queue Team name and Owner 1 email are required.");
             return;
         }
         fullName = `V-UOM-${callQueueSchool}-${callQueueTeam}`.replace(/ /g, '-').replace(/--+/g, '-').trim('-');
+
     } else if (requestType === 'teaching') {
-        let courseId = document.getElementById('courseId').value.trim();
-        let cohort = document.getElementById('cohort').value.trim();
-        if (!courseId) {
-            alert("The course ID is required.");
+        const courseId = document.getElementById('courseId').value.trim();
+        const cohortInput = document.getElementById('cohort').value.trim();
+        owner1 = document.getElementById('teachingOwner1').value.trim();
+        owner2 = document.getElementById('teachingOwner2').value.trim();
+
+        if (!courseId || !owner1) {
+            alert("Course ID and Owner 1 email are required.");
             return;
         }
-        fullName = `UOM-${courseId}-${cohort}`.replace(/ /g, '-').replace(/--+/g, '-').trim('-');
+        cohort = normalizeCohort(cohortInput);
+        fullName = `UOM-${courseId}${cohort ? '-' + cohort : ''}`.replace(/ /g, '-').replace(/--+/g, '-').trim('-');
     }
 
-    let resultElement = document.getElementById('result');
-    let countElement = document.getElementById('count');
-    let copyButton = document.getElementById('copyButton');
-    
+    const resultElement = document.getElementById('result');
+    const countElement = document.getElementById('count');
+    const emailButton = document.getElementById('emailButton');
+
     if (illegalChars.test(fullName)) {
-        resultElement.innerHTML = `Invalid name. The name contains illegal characters: ${illegalChars}`;
+        resultElement.innerHTML = `Invalid name. Contains illegal characters: ${illegalChars}`;
         resultElement.className = 'result invalid';
         countElement.textContent = '';
-        copyButton.style.display = 'none';
+        emailButton.style.display = 'none';
         return;
     }
 
     if (fullName.length > 64) {
-        resultElement.innerHTML = `Name length is important and needs to be 64 characters or under so it won't be truncated in things like site URL and associated mailboxes. Anything in red won't be included in the name. (${fullName.length} characters)<br>
-                                    <span style="color: green;">${fullName.substring(0, 64)}</span><span class="truncated">${fullName.substring(64)}</span>`;
+        resultElement.innerHTML = `Name must be ≤64 characters. Truncated version:<br>
+                                  <span style="color: green;">${fullName.substring(0, 64)}</span>
+                                  <span class="truncated">${fullName.substring(64)}</span>`;
         resultElement.className = 'result invalid';
-        copyButton.style.display = 'none';
+        emailButton.style.display = 'none';
     } else {
         resultElement.innerHTML = `Valid name: ${fullName}`;
         resultElement.className = 'result valid';
-        copyButton.style.display = 'inline-block';
+        emailButton.style.display = 'inline-block';
     }
 
     countElement.textContent = `Character count: ${fullName.length}`;
-    copyButton.setAttribute('data-name', fullName);
+    emailButton.setAttribute('data-name', fullName);
+    emailButton.setAttribute('data-owner1', owner1);
+    emailButton.setAttribute('data-owner2', owner2 || '');
+    if (cohort) emailButton.setAttribute('data-cohort', cohort);
 }
 
-function copyToClipboard() {
-    let copyButton = document.getElementById('copyButton');
-    let nameToCopy = copyButton.getAttribute('data-name');
-    navigator.clipboard.writeText(nameToCopy).then(function() {
-        alert('Name copied to clipboard: ' + nameToCopy);
-    }, function(err) {
-        alert('Could not copy text: ', err);
-    });
+function sendEmail() {
+    try {
+        const emailButton = document.getElementById('emailButton');
+        const validatedName = emailButton.getAttribute('data-name');
+        const owner1 = emailButton.getAttribute('data-owner1');
+        const owner2 = emailButton.getAttribute('data-owner2');
+        const cohort = emailButton.getAttribute('data-cohort') || '';
+
+        if (!validatedName || !owner1) {
+            alert('Please validate the name first');
+            return;
+        }
+
+        // REPLACE THIS EMAIL ADDRESS
+        const emailAddress = 'helpdesk@unimelb.edu.au';
+        const subject = `New Team/Site Request: ${validatedName}`;
+        let body = `Request details:\n\nName: ${validatedName}\n`;
+        
+        if (cohort) body += `Cohort: ${cohort}\n`;
+        body += `\nOwners:\n- Primary: ${owner1}\n`;
+        if (owner2) body += `- Secondary: ${owner2}\n`;
+        body += `\nAdditional notes:`;
+
+        const mailtoLink = `mailto:${emailAddress}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        window.open(mailtoLink, '_blank');
+        
+    } catch (error) {
+        alert('Error preparing email: ' + error.message);
+    }
 }
 </script>
 
