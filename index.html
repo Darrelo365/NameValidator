@@ -161,7 +161,6 @@ function normalizeCohort(input) {
     const cohort = input.trim();
     if (!cohort) return '';
 
-    // Handle different input formats
     const twoDigitPattern = /^\d{2}$/;          // 25 → 2025-26
     const shortRangePattern = /^(\d{2})-(\d{2})$/; // 25-26 → 2025-26
     const fourDigitPattern = /^20(\d{2})$/;     // 2025 → 2025-26
@@ -270,19 +269,26 @@ function sendEmail() {
             return;
         }
 
-        // REPLACE THIS EMAIL ADDRESS
+        // REPLACE THIS WITH YOUR SUPPORT EMAIL
         const emailAddress = 'helpdesk@unimelb.edu.au';
-        const subject = `New Team/Site Request: ${validatedName}`;
-        let body = `Request details:\n\nName: ${validatedName}\n`;
         
+        // Updated subject with owner email
+        const subject = `New Team/Site Request: ${validatedName} (Owner: ${owner1})`;
+        
+        let body = `Request details:\n\nName: ${validatedName}\n`;
         if (cohort) body += `Cohort: ${cohort}\n`;
         body += `\nOwners:\n- Primary: ${owner1}\n`;
         if (owner2) body += `- Secondary: ${owner2}\n`;
         body += `\nAdditional notes:`;
 
-        const mailtoLink = `mailto:${emailAddress}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-        window.open(mailtoLink, '_blank');
-        
+        // Create hidden link to handle mailto properly
+        const mailtoLink = document.createElement('a');
+        mailtoLink.href = `mailto:${emailAddress}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        mailtoLink.style.display = 'none';
+        document.body.appendChild(mailtoLink);
+        mailtoLink.click();
+        document.body.removeChild(mailtoLink);
+
     } catch (error) {
         alert('Error preparing email: ' + error.message);
     }
